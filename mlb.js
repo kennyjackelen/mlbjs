@@ -76,3 +76,66 @@ module.exports.getSchedule = function getSchedule( date, callback ) {
   }
 
 };
+
+module.exports.getGameEvents = function getGameEvents( game_data_directory, lastGUID, callback ) {
+
+  if ( typeof( game_data_directory ) === 'undefined' ) {
+    callback( 'Must supply a game data directory.');
+    return;
+  }
+
+  var path = game_data_directory + '/game_events.json';
+  var addToArray = ( lastGUID === undefined );
+
+  request( path, _digestGameEvents );
+
+  function _digestGameEvents( error, response, body ) {
+    var innings;
+    var plays = [];
+    if (!error && response.statusCode === 200) {
+      try {
+        innings = JSON.parse( body ).data.game.inning;
+      } catch ( e ) {
+        console.log('error parsing response');
+        callback( true );
+        return;
+      }
+      for ( var i = 0; i < innings.length; i++ ) {
+        var inning = innings[ i ];
+        var j, atbat;
+        if ( inning.top && typeof( inning.top ) === Array ) {
+          for ( j = 0; j < inning.top.atbat.length; j++ ) {
+            atbat = inning.top.atbat[ j ];
+            atbat.inning = Number( inning.num );
+            atbat.isTop = true;
+            if ( addToArray ) {
+              plays.push( atbat );
+            }
+            if ( atbat.play_guid === lastGUID ) {
+              addToArray = true;
+            }
+          }
+        }
+        if ( inning.bottom && typeof( inning.bottom ) === Array ) {
+          for ( j = 0; j < inning.bottom.atbat.length; j++ ) {
+            atbat = inning.bottom.atbat[ j ];
+            atbat.inning = Number( inning.num );
+            atbat.isTop = false;
+            if ( addToArray ) {
+              plays.push( atbat );
+            }
+            if ( atbat.play_guid === lastGUID ) {
+              addToArray = true;
+            }
+          }
+        }
+      }
+      callback( false, plays );
+    }
+    else {
+      console.log('error retrieving gameday data: ' + error.toString() );
+      callback( true );
+    }
+  }
+
+};

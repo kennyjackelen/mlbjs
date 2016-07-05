@@ -85,7 +85,7 @@ module.exports.getGameEvents = function getGameEvents( game_data_directory, last
   }
 
   var path = game_data_directory + '/game_events.json';
-  var addToArray = ( lastGUID === undefined );
+  var addToArray = Boolean( lastGUID );
 
   request( path, _digestGameEvents );
 
